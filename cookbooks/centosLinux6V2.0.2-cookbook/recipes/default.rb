@@ -4,6 +4,10 @@
 #
 # Copyright (c) 2017 The Authors, All Rights Reserved.
 
-execute 'gpg-key install' do
-  command 'rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7'
+mount "/tmp" do
+      pass 0
+      fstype "tmpfs"
+      device "tmpfs"
+      options "nodev,nosuid,noexec,size=256m"
+      action [:enable, :mount]
 end
