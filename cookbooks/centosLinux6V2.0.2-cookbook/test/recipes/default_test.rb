@@ -81,11 +81,59 @@ control "cis-1-1-1-8" do
  end
 end
 
-control "cis-1-1-2" do
-impact 2.2
-title "Ensure separate partition exists for /tmp (Scored)"
-desc "Since the /tmp directory is intended to be world-writable, there is a risk of resource exhaustion if it is not bound to a separate partition. In addition, making /tmp its own file system allows an administrator to set the noexec option on the mount, making /tmp useless for an attacker to install executable code. It would also prevent an attacker from establishing a hardlink to a system setuid program and wait for it to be updated. Once the program was updated, the hardlink would be broken and the attacker would have his own copy of the program. If the program happened to have a security vulnerability, the attacker could continue to exploit the known flaw."
-describe command("mount | grep /tmp") do
-   its('stdout') { should match /tmpfs on \/tmp type tmpfs (rw,nosuid,nodev,noexec,relatime)/ }
+#control "cis-1-1-2" do
+#impact 2.2
+#title "Ensure separate partition exists for /tmp (Scored)"
+#desc "Since the /tmp directory is intended to be world-writable, there is a risk of resource exhaustion if it is not bound to a separate partition. In addition, making /tmp its own file system allows an administrator to set the noexec option on the mount, making /tmp useless for an attacker to install executable code. It would also prevent an attacker from establishing a hardlink to a system setuid program and wait for it to be updated. Once the program was updated, the hardlink would be broken and the attacker would have his own copy of the program. If the program happened to have a security vulnerability, the attacker could continue to exploit the known flaw."
+#describe command("mount | grep /tmp") do
+#  its('stdout') { should match /tmpfs on \/tmp type tmpfs (rw,nosuid,nodev,noexec,relatime)/ }
+#end
+#end
+
+control "cis-1-2-1" do
+ impact 1.1
+ title "Ensure package manager repositories are configured (Not Scored)"
+ desc "If a system's package repositories are misconfigured important patches may not be identified or a rogue repository could introduce compromised software."
+ describe command("yum repolist") do
+  its('stdout') {should match /repolist: 7,362/}
+ end
+end
+
+control "cis-1-2-2" do 
+ impact 1.1
+ title "Ensure GPG keys are configured (Not Scored)"
+ desc "It is important to ensure that updates are obtained from a valid source to protect against spoofing that could lead to the inadvertent installation of malware on the system."
+ describe command("rpm -q gpg-pubkey --qf '%{name}-%{version}-%{release} --> %{summary}\n'") do
+ its('stdout') {should match /CentOS 6 Official Signing Key/} 
+ end
+end
+
+control "cis-1-2-3" do
+ impact 1.1
+ title "Ensure gpgcheck is globally activated (Scored)"
+ desc "It is important to ensure that an RPM's package signature is always checked prior to installation to ensure that the software is obtained from a trusted source."
+ describe file('/etc/yum.conf') do
+ its('content') {should match /gpgcheck=1/}
+ end
+ describe command('grep ^gpgcheck /etc/yum.repos.d/*') do
+ its('stdout') {should match /gpgcheck=1/}
+ end
+end
+
+control "cis-1-3-1" do
+ impact 1.1
+ title "Ensure AIDE is installed (Scored)"
+ desc "By monitoring the filesystem state compromised files can be detected to prevent or limit the exposure of accidental or malicious misconfigurations or modified binaries."
+ describe command("rpm -q aide") do
+ its('stdout') { should match /aide-/}
+ end
+end
+
+control "cis-1-4-1" do
+ impact 1.1
+ title "Ensure permissions on bootloader config are configured (Scored)"
+ desc "Setting the permissions to read and write for root only prevents non-root users from seeing the boot parameters or changing them. Non-root users who read the boot parameters may be able to identify weaknesses in security upon boot and be able to exploit them." 
+ describe command("stat /boot/grub/grub.conf") do
+ its('stdout') { should match /Access: (0600\/-rw-------) Uid: ( 0\/ root) Gid: ( 0\/ root)/}
  end
 end
