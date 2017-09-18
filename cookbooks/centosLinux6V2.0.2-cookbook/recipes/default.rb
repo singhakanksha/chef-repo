@@ -16,6 +16,7 @@
 # content 'PROMPT=no'
 #end
 
+
 %w[ /etc /etc/dconf /etc/dconf/profile ].each do |path|
   directory path do
     action :create
@@ -58,6 +59,7 @@ ruby_block "insert_line1" do
   file = Chef::Util::FileEdit.new("/etc/selinux/config")
   file.insert_line_if_no_match("SELINUX=enforcing","SELINUX=enforcing")
   file.insert_line_if_no_match("SELINUXTYPE=targeted","SELINUXTYPE=targeted")
+  file.write_file
  end
 end
 
@@ -70,6 +72,42 @@ ruby_block "insert_line2" do
   end
 end
 
+file "/etc/ntp.conf" do
+ action :create
+end
+
+ruby_block "insert_line3" do
+ block do
+  file = Chef::Util::FileEdit.new("/etc/ntp.conf") 
+  file.insert_line_if_no_match("restrict -4 default","restrict -4 default kod nomodify notrap nopeer noquery")
+  file.insert_line_if_no_match("restrict -6 default","restrict -6 default kod nomodify notrap nopeer noquery")
+  file.insert_line_if_no_match("server","server <remote-server>")
+  file.write_file
+ end
+end
+
+file "/etc/chrony.conf" do
+ action :create
+ content 'server <remote-server>'
+end
+
+file "/etc/sysconfig/chronyd" do
+ action :create
+ content 'OPTIONS="-u chrony"'
+end 
+
+
+file "/etc/sysconfig/ntpd" do
+ action :create
+end
+
+ruby_block "insert_line4" do
+ block do
+  file = Chef::Util::FileEdit.new("/etc/sysconfig/ntpd") 
+  file.insert_line_if_no_match("OPTIONS","OPTIONS='-u ntp:ntp'")
+   file.write_file
+ end
+end
 execute 'gpg-key install' do
   command 'rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6'
 end
@@ -84,4 +122,16 @@ end
 
 execute 'move' do
  command('mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz')
+end
+
+execute 'install xinetd' do
+ command('yum install -y xinetd')
+end
+
+execute 'install ntp' do
+ command('yum install -y ntp')
+end
+
+execute 'install chrony' do
+ command('yum install -y chrony')
 end
