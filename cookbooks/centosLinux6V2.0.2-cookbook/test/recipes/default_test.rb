@@ -598,3 +598,208 @@ control "cis-2-2-16" do
   its('stdout') {should match /ypserv 0:off 1:off 2:off 3:off 4:off 5:off 6:off/}
  end
 end
+
+control "cis-2-3-1" do
+ title "Ensure NIS Client is not installed (Scored)"
+ impact 1.1
+ desc "The NIS service is inherently an insecure system that has been vulnerable to DOS attacks, buffer overflows and has poor authentication for querying NIS maps. NIS generally has been replaced by such protocols as Lightweight Directory Access Protocol (LDAP). It is recommended that the service be removed."
+ describe command('rpm -q ypbind') do
+  its('stdout') {should match //}
+ end
+end
+
+control "cis-2-3-2" do
+ title "Ensure rsh client is not installed (Scored)"
+ impact 1.1
+ desc "These legacy clients contain numerous security exposures and have been replaced with the more secure SSH package. Even if the server is removed, it is best to ensure the clients are also removed to prevent users from inadvertently attempting to use these commands and therefore exposing their credentials. Note that removing the rsh package removes the clients for rsh , rcp and rlogin ."
+ describe command('rpm -q rsh') do
+  its('stdout') { should match //}
+ end
+end
+
+control "cis-2-3-3" do
+ title "Ensure talk client is not installed (Scored)"
+ impact 1.1
+ desc "The software presents a security risk as it uses unencrypted protocols for communication."
+ describe command('rpm -q talk') do
+  its('stdout') { should match //}
+ end
+end
+
+control "cis-2-3-4" do
+ title "Ensure telnet client is not installed (Scored)"
+ impact 1.1
+ desc "The telnet protocol is insecure and unencrypted. The use of an unencrypted transmission medium could allow an unauthorized user to steal credentials. The ssh package provides an encrypted session and stronger security and is included in most Linux distributions."
+ describe command('rpm -q telnet') do
+  its('stdout') {should match //}
+ end
+end
+
+control "cis-2-3-5" do
+ title "Ensure LDAP client is not installed (Scored)"
+ impact 1.1
+ desc "If the system will not need to act as an LDAP client, it is recommended that the software be removed to reduce the potential attack surface."
+ describe command('rpm -q openldap-clients') do
+  its('stdout') {should match //}
+ end
+end
+
+control "cis-3-1-1" do
+ title "Ensure IP forwarding is disabled (Scored)"
+ impact 1.1
+ desc "Setting the flag to 0 ensures that a system with multiple interfaces (for example, a hard proxy), will never be able to forward packets, and therefore, never serve as a router."
+ describe command('sysctl net.ipv4.ip_forward') do
+  its('stdout') {should match /net.ipv4.ip_forward = 0/}
+ end
+end
+
+control "cis-3-1-2" do
+ title "Ensure packet redirect sending is disabled (Scored)"
+ impact 1.1
+ desc "An attacker could use a compromised host to send invalid ICMP redirects to other router devices in an attempt to corrupt routing and have users access a system set up by the attacker as opposed to a valid system."
+ describe command('sysctl net.ipv4.conf.all.send_redirects') do
+  its('stdout') {should match /net.ipv4.conf.all.send_redirects = 0/}
+ end
+ describe command('sysctl net.ipv4.conf.default.send_redirects') do
+  its('stdout') {should match /net.ipv4.conf.default.send_redirects = 0/}
+ end
+end
+
+control "cis-3-2-1" do
+ title "Ensure source routed packets are not accepted (Scored)"
+ impact 1.1
+ desc "Setting net.ipv4.conf.all.accept_source_route and net.ipv4.conf.default.accept_source_route to 0 disables the system from accepting source routed packets. Assume this system was capable of routing packets to Internet routable addresses on one interface and private addresses on another interface. Assume that the private addresses were not routable to the Internet routable addresses and vice versa. Under normal routing circumstances, an attacker from the Internet routable addresses could not use the system as a way to reach the private address systems. If, however, source routed packets were allowed, they could be used to gain access to the private address systems as the route could be specified, rather than rely on routing protocols that did not allow this routing."
+ describe command('sysctl net.ipv4.conf.all.accept_source_route') do
+  its('stdout') {should match /net.ipv4.conf.all.accept_source_route = 0/}
+ end 
+ describe command('sysctl net.ipv4.conf.default.accept_source_route') do
+  its('stdout') { should match /net.ipv4.conf.default.accept_source_route = 0/}
+ end
+end
+
+control "cis-3-2-2" do
+ title "Ensure ICMP redirects are not accepted (Scored)"
+ impact 1.1
+ desc "Attackers could use bogus ICMP redirect messages to maliciously alter the system routing tables and get them to send packets to incorrect networks and allow your system packets to be captured."
+ describe command('sysctl net.ipv4.conf.all.accept_redirects') do
+  its('stdout') {should match /net.ipv4.conf.all.accept_redirects = 0/}
+ end
+ describe command('sysctl net.ipv4.conf.default.accept_redirects') do
+  its('stdout') {should match /net.ipv4.conf.default.accept_redirects = 0/}
+ end
+end
+
+control "cis-3-2-3" do
+ title "Ensure secure ICMP redirects are not accepted (Scored)"
+ impact 1.1
+ desc "It is still possible for even known gateways to be compromised. Setting net.ipv4.conf.all.secure_redirects to 0 protects the system from routing table updates by possibly compromised known gateways."
+ describe command('sysctl net.ipv4.conf.all.secure_redirects') do
+   its('stdout') {should match /net.ipv4.conf.all.secure_redirects = 0/}
+ end
+ describe command('sysctl net.ipv4.conf.default.secure_redirects') do
+   its('stdout') { should match /net.ipv4.conf.default.secure_redirects = 0/}
+ end
+ end
+
+control "cis-3-2-4" do
+ title "Ensure suspicious packets are logged (Scored)"
+ impact 1.1
+ desc "Enabling this feature and logging these packets allows an administrator to investigate the possibility that an attacker is sending spoofed packets to their system."
+ describe command('sysctl net.ipv4.conf.all.log_martians') do
+  its('stdout') {should match /net.ipv4.conf.all.log_martians = 1/}
+ end
+ describe command('sysctl net.ipv4.conf.default.log_martians') do
+  its('stdout') {should match /net.ipv4.conf.default.log_martians = 1/}
+ end
+end
+
+control "cis-3-2-5" do
+ title "Ensure broadcast ICMP requests are ignored (Scored)"
+ impact 1.1
+ desc "Accepting ICMP echo and timestamp requests with broadcast or multicast destinations for your network could be used to trick your host into starting (or participating) in a Smurf attack. A Smurf attack relies on an attacker sending large amounts of ICMP broadcast messages with a spoofed source address. All hosts receiving this message and responding would send echo-reply messages back to the spoofed address, which is probably not routable. If many hosts respond to the packets, the amount of traffic on the network could be significantly multiplied."
+ describe command('sysctl net.ipv4.icmp_echo_ignore_broadcasts') do
+  its('stdout') {should match /net.ipv4.icmp_echo_ignore_broadcasts = 1/}
+ end
+end
+
+control "cis-3-2-6" do
+ title "Ensure bogus ICMP responses are ignored (Scored)"
+ impact 1.1
+ desc "Some routers (and some attackers) will send responses that violate RFC-1122 and attempt to fill up a log file system with many useless error messages."
+ describe command('sysctl net.ipv4.icmp_ignore_bogus_error_responses') do
+  its('stdout') {should match /net.ipv4.icmp_ignore_bogus_error_responses = 1/}
+ end
+end
+
+control "cis-3-2-7" do
+ title "Ensure Reverse Path Filtering is enabled (Scored)" 
+ impact 1.1
+ desc "Setting these flags is a good way to deter attackers from sending your system bogus packets that cannot be responded to. One instance where this feature breaks down is if asymmetrical routing is employed. This would occur when using dynamic routing protocols (bgp, ospf, etc) on your system. If you are using asymmetrical routing on your system, you will not be able to enable this feature without breaking the routing."
+ describe command('sysctl net.ipv4.conf.all.rp_filter') do
+  its('stdout') { should match /net.ipv4.conf.all.rp_filter = 1/}
+ end
+ describe command('sysctl net.ipv4.conf.default.rp_filter') do
+  its('stdout') {should match /net.ipv4.conf.default.rp_filter = 1/}
+ end
+end
+
+control "cis-3-2-8" do
+ title "Ensure TCP SYN Cookies is enabled (Scored)"
+ impact 1.1
+ desc "Attackers use SYN flood attacks to perform a denial of service attacked on a system by sending many SYN packets without completing the three way handshake. This will quickly use up slots in the kernel's half-open connection queue and prevent legitimate connections from succeeding. SYN cookies allow the system to keep accepting valid connections, even if under a denial of service attack."
+ describe command('sysctl net.ipv4.tcp_syncookies') do
+  its('stdout') {should match /net.ipv4.tcp_syncookies = 1/}
+ end
+end
+
+control "cis-3-3-1" do
+ title "Ensure IPv6 router advertisements are not accepted (Scored)"
+ impact 1.1
+ desc "It is recommended that systems not accept router advertisements as they could be tricked into routing traffic to compromised machines. Setting hard routes within the system (usually a single default route to a trusted router) protects the system from bad routes."
+ describe command('sysctl net.ipv6.conf.all.accept_ra') do
+  its('stdout') {should match /net.ipv6.conf.all.accept_ra = 0/}
+ end
+ describe command('sysctl net.ipv6.conf.default.accept_ra') do
+ its('stdout') {should match /net.ipv6.conf.default.accept_ra = 0/}
+ end
+end
+
+control "cis-3-3-2" do
+ title "Ensure IPv6 redirects are not accepted (Scored)"
+ impact 1.1
+ desc "It is recommended that systems not accept ICMP redirects as they could be tricked into routing traffic to compromised machines. Setting hard routes within the system (usually a single default route to a trusted router) protects the system from bad routes."
+ describe command('sysctl net.ipv6.conf.all.accept_redirects') do
+  its('stdout') {should match /net.ipv6.conf.all.accept_redirect = 0/}
+ end
+ describe command('sysctl net.ipv6.conf.default.accept_redirects') do
+  its('stdout') {should match /net.ipv6.conf.default.accept_redirect = 0/}
+ end
+end
+
+control "cis-3-3-3" do
+ title "Ensure IPv6 is disabled (Not Scored)"
+ impact 1.1
+ desc "If IPv6 is not to be used, it is recommended that it be disabled to reduce the attack surface of the system."
+ describe command('modprobe -c | grep ipv6') do
+  its('stdout')  {should match /options ipv6 disable=1/}
+ end
+end
+
+control "cis-3-4-1" do
+ title "Ensure TCP Wrappers is installed (Scored)"
+ impact 1.1
+ desc "TCP Wrappers provide a good simple access list mechanism to services that may not have that support built in. It is recommended that all services that can support TCP Wrappers, use it."
+ describe command('rpm -q tcp_wrappers') do
+  its('stdout') {should match /tcp_wrappers-/}
+ end
+ describe command('rpm -q tcp_wrappers-libs') do
+  its('stdout') { should match /tcp_wrappers-libs-/}
+ end
+end
+
+control "cis-3-4-2" do
+ title "Ensure /etc/hosts.allow is configured (Scored)"
+ impact 1.1
+ desc "The /etc/hosts.allow file supports access control by IP and helps ensure that only authorized systems can connect to the system."
+ describe command('')
+end
