@@ -796,10 +796,91 @@ control "cis-3-4-1" do
   its('stdout') { should match /tcp_wrappers-libs-/}
  end
 end
-
+<<eof
 control "cis-3-4-2" do
  title "Ensure /etc/hosts.allow is configured (Scored)"
  impact 1.1
  desc "The /etc/hosts.allow file supports access control by IP and helps ensure that only authorized systems can connect to the system."
  describe command('')
 end
+eof
+
+control "cis-3-4-3" do
+ title "Ensure /etc/hosts.deny is configured (Scored)"
+ impact 1.1
+ desc "The /etc/hosts.deny file serves as a failsafe so that any host not specified in /etc/hosts.allow is denied access to the system."
+ describe command('cat /etc/hosts.deny') do
+   its('stdout') {should match /ALL: ALL/}
+ end
+end
+
+control "cis-3-4-4" do
+ title "Ensure permissions on /etc/hosts.allow are configured (Scored)"
+ impact 1.1
+ desc "It is critical to ensure that the /etc/hosts.allow file is protected from unauthorized write access. Although it is protected by default, the file permissions could be changed either inadvertently or through malicious actions."
+ describe file('/etc/hosts.allow') do
+  its('mode') {should cmp '0644'}
+  its('owner') { should eq 'root' }
+  its('group') { should eq 'root' }
+ end
+end
+
+control "cis-3-4-5" do
+ title "Ensure permissions on /etc/hosts.deny are configured (Scored)"
+ impact 1.1
+ desc "It is critical to ensure that the /etc/hosts.deny file is protected from unauthorized write access. Although it is protected by default, the file permissions could be changed either inadvertently or through malicious actions."
+ describe file('/etc/hosts.deny') do
+  its('mode') {should cmp '0644'}
+  its('owner') { should eq 'root' }
+  its('group') { should eq 'root' }
+ end
+end
+
+control "cis-3-5-1" do
+ title "Ensure DCCP is disabled (Not Scored)"
+ impact 1.1
+ desc "If the protocol is not required, it is recommended that the drivers not be installed to reduce the potential attack surface."
+ describe command('modprobe -n -v dccp') do
+   its('stdout') {should match /install \/bin\/true/}
+ end
+ describe command('lsmod | grep dccp') do
+   its('stdout') { should match //}
+ end
+end
+
+control "cis-3-5-2" do
+ title "Ensure SCTP is disabled (Not Scored)"
+ impact 1.1
+ desc "If the protocol is not being used, it is recommended that kernel module not be loaded, disabling the service to reduce the potential attack surface."
+ describe command('modprobe -n -v sctp') do
+  its('stdout') {should match /install \/bin\/true/}
+ end
+  describe command('lsmod | grep sctp') do
+   its('stdout') { should match //}
+ end
+end
+
+control "cis-3-5-3" do
+ title "Ensure RDS is disabled (Not Scored)" 
+ impact 1.1
+ desc "If the protocol is not being used, it is recommended that kernel module not be loaded, disabling the service to reduce the potential attack surface." 
+describe command('modprobe -n -v rds') do
+  its('stdout') {should match /install \/bin\/true/}
+ end
+  describe command('lsmod | grep rds') do
+   its('stdout') { should match //}
+ end
+end
+
+control "cis-3-5-4" do
+ title "Ensure TIPC is disabled (Not Scored)"
+ impact 1.1
+ desc "If the protocol is not being used, it is recommended that kernel module not be loaded, disabling the service to reduce the potential attack surface."
+describe command('modprobe -n -v tipc') do
+  its('stdout') {should match /install \/bin\/true/}
+ end
+  describe command('lsmod | grep tipc') do
+   its('stdout') { should match //}
+ end
+end
+
