@@ -884,3 +884,214 @@ describe command('modprobe -n -v tipc') do
  end
 end
 
+control "cis-3-6-1" do
+ title "Ensure iptables is installed (Scored)"
+ impact 1.1
+ desc "iptables is required for firewall management and configuration."
+ describe command('rpm -q iptables') do
+ its('stdout') {should match /iptables-/}
+ end
+end
+
+control "cis-3-6-2" do
+ title "Ensure default deny firewall policy (Scored)"
+ impact 1.1
+ desc "With a default accept policy the firewall will accept any packet that is not configured to be denied. It is easier to white list acceptable usage than to black list unacceptable usage."
+ describe command('iptables -L') do
+  its('stdout') {should match /Chain INPUT (policy DROP)\nChain FORWARD (policy DROP)\nChain OUTPUT (policy DROP)/}
+ end
+end
+
+control "cis-3-6-3" do
+ title "Ensure loopback traffic is configured (Scored)"
+ impact 1.1
+ desc "Loopback traffic is generated between processes on machine and is typically critical to operation of the system. The loopback interface is the only place that loopback network (127.0.0.0/8) traffic should be seen, all other interfaces should ignore traffic on this network as an anti-spoofing measure."
+ describe command('iptables -L INPUT -v -n') do
+  its('stdout') {should match /Chain INPUT \(policy DROP 0 packets, 0 bytes\)\npkts bytes target\ndestination\n    0     0 ACCEPT\n    0     0 DROP\nprot opt in     out\nall  --  lo     \*\nall  --  \*      \*\nsource\n0.0.0.0\/0\n127.0.0.0\/8\n0.0.0.0\/0\n0.0.0.0\/0/}
+ end
+ describe command('iptables -L OUTPUT -v -n') do
+  its('stdout') {should match /Chain OUTPUT \(policy DROP 0 packets, 0 bytes\)\n pkts bytes target     prot opt in     out     source\ndestination\n0 0 ACCEPT all -- \* lo 0.0.0.0\/0.0.0.0.0\/0/}
+ end
+end 
+
+control "cis-3-6-5" do
+ title "Ensure firewall rules exist for all open ports (Scored)"
+ impact 1.1
+ desc "Without a firewall rule configured for open ports default firewall policy will drop all packets to these ports."
+ describe command('netstat -ln') do
+ its('stdout') { should match /Active Internet connections \(only servers\)\nProto Recv-Q Send-Q Local Address Foreign Address State tcp 0 0 0.0.0.0:22 0.0.0.0:\* LISTEN/}
+ end
+  describe command('iptables -L INPUT -v -n') do
+   its('stdout') {should match /Chain INPUT \(policy DROP 0 packets, 0 bytes\)\n pkts bytes target     prot opt in     out     source\ndestination\n    0     0 ACCEPT\n0 0 DROP\n    0     0 ACCEPT\ntcp dpt:22 state NEW\nall  --  lo     \*\nall  --  \*      \*\ntcp  --  \*      \*\n0.0.0.0\/0\n127.0.0.0\/8\n0.0.0.0\/0\n0.0.0.0\/0\n0.0.0.0\/0\n0.0.0.0\/0/} 
+  end 
+end
+
+ 
+control "cis-4-1-1-1" do
+ title "Ensure audit log storage size is configured (Not Scored)"
+ impact 2.2
+ desc "It is important that an appropriate size is determined for log files so that they do not impact the system and audit data is not lost."
+ describe command('grep max_log_file /etc/audit/auditd.conf') do
+ its('stdout') {should match /max_log_file = /}
+ end
+end
+
+control "cis-4-1-1-2" do
+ title "Ensure system is disabled when audit logs are full (Scored)" 
+ impact 2.2
+ desc "In high security contexts, the risk of detecting unauthorized access or nonrepudiation exceeds the benefit of the system's availability."
+ describe command('grep space_left_action /etc/audit/auditd.conf') do
+  its('stdout') {should match /space_left_action = email/}
+ end
+  describe command('grep action_mail_acct /etc/audit/auditd.conf') do
+  its('stdout') {should match /action_mail_acct = root/}
+ end
+ describe command('grep admin_space_left_action /etc/audit/auditd.conf') do
+  its('stdout') {should match /admin_space_left_action = halt/} 
+ end
+end
+
+control "cis-4-1-1-3" do
+ title "Ensure audit logs are not automatically deleted (Scored)"
+ impact 2.2
+ desc "In high security contexts, the benefits of maintaining a long audit history exceed the cost of storing the audit history."
+ describe command('grep max_log_file_action /etc/audit/auditd.conf') do
+  its('stdout') { should match /max_log_file_action = keep_logs/}
+ end
+end
+
+control "cis-4-1-2" do
+ title "Ensure auditd service is enabled (Scored)"
+ impact 2.2
+ desc "The capturing of system events provides system administrators with information to allow them to determine if unauthorized access to their system is occurring."
+ describe command('chkconfig --list auditd') do
+  its('stdout') { should match /auditd                    0:off  1:off  2:on   3:on   4:on   5:on   6:off/}
+ end
+end
+
+control "cis-4-1-3" do
+ title "Ensure auditing for processes that start prior to auditd is enabled (Scored)"
+ impact 2.2
+ desc "Audit events need to be captured on processes that start up prior to auditd , so that potential malicious activity cannot go undetected."
+ describe command('grep "^\s*kernel" /boot/grub/grub.conf') do
+  its('stdout') {should match /audit=1/}
+ end
+end
+<<eof
+control "cis-4-1-4" do
+ title "Ensure events that modify date and time information are collected (Scored)"
+ impact 2.2
+ desc  "Unexpected changes in system date and/or time could be a sign of malicious activity on the system."
+ describe command('grep time-change /etc/audit/audit.rules') do
+  its('stdout') {should match /-a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time-\nchange\n-a always,exit -F arch=b32 -S clock_settime -k time-change -w \/etc\/localtime -p wa -k time-change/}
+ end
+ describe command('grep time-change /etc/audit/audit.rules') do
+  its('stdout') { should match /-a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change\n-a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time- change\n-a always,exit -F arch=b64 -S clock_settime -k time-change\n-a always,exit -F arch=b32 -S clock_settime -k time-change\n-w \/etc\/localtime -p wa -k time-change/}
+ end
+end
+eof
+
+control "cis-4-1-5" do
+ title "Ensure events that modify user/group information are collected (Scored)"
+ impact 2.2
+ desc "Unexpected changes to these files could be an indication that the system has been compromised and that an unauthorized user is attempting to hide their activities or compromise additional accounts."
+ describe command('grep identity /etc/audit/audit.rules') do
+  its('stdout') { should match /-w \/etc\/group -p wa -k identity\n-w \/etc\/passwd -p wa -k identity\n-w \/etc\/gshadow -p wa -k identity\n-w \/etc\/shadow -p wa -k identity\n-w \/etc\/security\/opasswd -p wa -k identity/}
+ end
+end
+
+control "cis-4-1-6" do
+ title "Ensure events that modify the system's network environment are collected (Scored)"
+ impact 2.2
+ desc "Monitoring sethostname and setdomainname will identify potential unauthorized changes to host and domainname of a system. The changing of these names could potentially break security parameters that are set based on those names. The /etc/hosts file is monitored for changes in the file that can indicate an unauthorized intruder is trying to change machine associations with IP addresses and trick users and processes into connecting to unintended machines. Monitoring /etc/issue and /etc/issue.net is important, as intruders could put disinformation into those files and trick users into providing information to the intruder. Monitoring /etc/sysconfig/network is important as it can show if network interfaces or scripts are being modified in a way that can lead to the machine becoming unavailable or compromised. All audit records will be tagged with the identifier system-locale."
+ describe command('grep system-locale /etc/audit/audit.rules') do
+ its('stdout') { should match /-a always,exit -F arch=b32 -S sethostname -S setdomainname -k system-locale -w \/etc\/issue -p wa -k system-locale\n-w \/etc\/issue.net -p wa -k system-locale\n-w \/etc\/hosts -p wa -k system-locale\n-w \/etc\/sysconfig\/network -p wa -k system-locale/} 
+end
+ describe command('grep system-locale /etc/audit/audit.rules') do
+  its('stdout') { should match /-a always,exit -F arch=b64 -S sethostname -S setdomainname -k system-locale -a always,exit -F arch=b32 -S sethostname -S setdomainname -k system-locale -w \/etc\/issue -p wa -k system-locale\n-w \/etc\/issue.net -p wa -k system-locale\n-w \/etc\/hosts -p wa -k system-locale\n-w \/etc\/sysconfig\/network -p wa -k system-locale/}
+ end
+end
+
+control "cis-4-1-7" do
+ title "Ensure events that modify the system's Mandatory Access Controls are collected (Scored)"
+ impact "2.2"
+ desc "Changes to files in these directories could indicate that an unauthorized user is attempting to modify access controls and change security contexts, leading to a compromise of the system."
+ describe command('grep MAC-policy /etc/audit/audit.rules') do
+  its('stdout') { should match /-w \/etc\/selinux\/ -p wa -k MAC-policy/}
+ end
+end
+
+control "cis-4-1-8" do
+ title  "Ensure login and logout events are collected (Scored)"
+ impact 2.2
+ desc "Monitoring login/logout events could provide a system administrator with information associated with brute force attacks against user logins."
+ describe command('grep logins /etc/audit/audit.rules') do
+  its('stdout') { should match /-w \/var\/log\/lastlog -p wa -k logins\n-w \/var\/run\/faillock\/ -p wa -k logins/}
+ end
+end
+
+control "cis-4-1-9" do
+ title "Ensure session initiation information is collected (Scored)"
+ impact 2.2
+ desc "Monitoring these files for changes could alert a system administrator to logins occurring at unusual hours, which could indicate intruder activity (i.e. a user logging in at a time when they do not normally log in)."
+ describe command('grep session /etc/audit/audit.rules') do
+  its('stdout') { should match /-w \/var\/run\/utmp -p wa -k session\n-w \/var\/log\/wtmp -p wa -k session\n-w \/var\/log\/btmp -p wa -k session/}
+ end
+end
+
+control "cis-4-1-10" do
+ title "Ensure discretionary access control permission modification events are collected (Scored)"
+ impact 2.2
+ desc "Monitoring for changes in file attributes could alert a system administrator to activity that could indicate intruder activity or policy violation."
+ describe command('grep perm_mod /etc/audit/audit.rules') do
+  its('stdout') {should match /-a always,exit -F arch=b32 -S chmod -S fchmod -S fchmodat -F auid>=500 -F auid!=4294967295 -k perm_mod\n-a always,exit -F arch=b32 -S chown -S fchown -S fchownat -S lchown -F auid>=500 -F auid!=4294967295 -k perm_mod\n-a always,exit -F arch=b32 -S setxattr -S lsetxattr -S fsetxattr -S removexattr -S lremovexattr -S fremovexattr -F auid>=500 -F auid!=4294967295 -k perm_mod/}
+ end
+ describe command('grep perm_mod /etc/audit/audit.rules') do
+  its('stdout') { should match /-a always,exit -F arch=b64 -S chmod -S fchmod -S fchmodat -F auid>=500 -F auid!=4294967295 -k perm_mod\n-a always,exit -F arch=b32 -S chmod -S fchmod -S fchmodat -F auid>=500 -F auid!=4294967295 -k perm_mod\n-a always,exit -F arch=b64 -S chown -S fchown -S fchownat -S lchown -F auid>=500 -F auid!=4294967295 -k perm_mod/}
+ end
+end
+
+control "cis-4-1-11" do
+ title "Ensure unsuccessful unauthorized file access attempts are collected (Scored)"
+ impact 2.2
+ desc "Failed attempts to open, create or truncate files could be an indication that an individual or process is trying to gain unauthorized access to the system."
+ describe command('grep access /etc/audit/audit.rules') do
+  its('stdout') {should match /-a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=500 -F auid!=4294967295 -k access -a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=500 -F auid!=4294967295 -k access/}
+ end
+ describe command('grep access /etc/audit/audit.rules')do
+  its('stdout') { should match /-a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=500 -F auid!=4294967295 -k access -a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=500 -F auid!=4294967295 -k access -a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=500 -F auid!=4294967295 -k access -a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=500 -F auid!=4294967295 -k access/}
+ end
+end
+
+<<eof
+control "cis-4-1-12" do
+ title "Ensure use of privileged commands is collected (Scored)"
+ impact 2.2
+ desc "Execution of privileged commands by non-privileged users could be an indication of someone trying to gain unauthorized access to the system."
+ describe command('') do
+  
+ end
+eof
+
+control "cis-4-1-13" do
+ title "Ensure successful file system mounts are collected (Scored)"
+ impact 2.2
+ desc "It is highly unusual for a non privileged user to mount file systems to the system. While tracking mount commands gives the system administrator evidence that external media may have been mounted (based on a review of the source of the mount and confirming it's an external media type), it does not conclusively indicate that data was exported to the media. System administrators who wish to determine if data were exported, would also have to track successful open , creat and truncate system calls requiring write access to a file under the mount point of the external media file system. This could give a fair indication that a write occurred. The only way to truly prove it, would be to track successful writes to the external media. Tracking write system calls could quickly fill up the audit log and is not recommended. Recommendations on configuration options to track data export to media is beyond the scope of this document."
+ describe command('grep mounts /etc/audit/audit.rules') do
+  its('stdout') { should match /-a always,exit -F arch=b32 -S mount -F auid>=500 -F auid!=4294967295 -k mounts/}
+ end
+describe command('grep mounts /etc/audit/audit.rules') do
+ its('stdout') { should match /-a always,exit -F arch=b64 -S mount -F auid>=500 -F auid!=4294967295 -k mounts\n-a always,exit -F arch=b32 -S mount -F auid>=500 -F auid!=4294967295 -k mounts/}
+ end
+end
+end
+
+control "cis-4-1-14" do
+ title " Ensure file deletion events by users are collected (Scored)"
+ impact 2.2
+ desc "Monitoring these calls from non-privileged users could provide a system administrator with evidence that inappropriate removal of files and file attributes associated with protected files is occurring. While this audit option will look at all events, system administrators will want to look for specific privileged files that are being deleted or altered."
+ describe command('grep delete /etc/audit/audit.rules') do
+  its('stdout') { should match /-a always,exit -F arch=b32 -S unlink -S unlinkat -S rename -S renameat -F auid>=500 -F auid!=4294967295 -k delete/}
+ end
+end
+
