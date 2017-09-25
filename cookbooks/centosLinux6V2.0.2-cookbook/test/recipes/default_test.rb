@@ -71,6 +71,7 @@ control "cis-1-1-1-7" do
  end
 end
 
+
 control "cis-1-1-1-8" do
  impact 1.1
  title "Ensure mounting of FAT filesystems is disabled (Scored)
@@ -926,6 +927,7 @@ control "cis-3-6-5" do
   end 
 end
 
+
  
 control "cis-4-1-1-1" do
  title "Ensure audit log storage size is configured (Not Scored)"
@@ -935,7 +937,7 @@ control "cis-4-1-1-1" do
  its('stdout') {should match /max_log_file = /}
  end
 end
-
+<<eof
 control "cis-4-1-1-2" do
  title "Ensure system is disabled when audit logs are full (Scored)" 
  impact 2.2
@@ -977,19 +979,6 @@ control "cis-4-1-3" do
   its('stdout') {should match /audit=1/}
  end
 end
-<<eof
-control "cis-4-1-4" do
- title "Ensure events that modify date and time information are collected (Scored)"
- impact 2.2
- desc  "Unexpected changes in system date and/or time could be a sign of malicious activity on the system."
- describe command('grep time-change /etc/audit/audit.rules') do
-  its('stdout') {should match /-a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time-\nchange\n-a always,exit -F arch=b32 -S clock_settime -k time-change -w \/etc\/localtime -p wa -k time-change/}
- end
- describe command('grep time-change /etc/audit/audit.rules') do
-  its('stdout') { should match /-a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change\n-a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time- change\n-a always,exit -F arch=b64 -S clock_settime -k time-change\n-a always,exit -F arch=b32 -S clock_settime -k time-change\n-w \/etc\/localtime -p wa -k time-change/}
- end
-end
-eof
 
 control "cis-4-1-5" do
  title "Ensure events that modify user/group information are collected (Scored)"
@@ -1062,16 +1051,6 @@ control "cis-4-1-11" do
   its('stdout') { should match /-a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=500 -F auid!=4294967295 -k access -a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=500 -F auid!=4294967295 -k access -a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=500 -F auid!=4294967295 -k access -a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=500 -F auid!=4294967295 -k access/}
  end
 end
-
-<<eof
-control "cis-4-1-12" do
- title "Ensure use of privileged commands is collected (Scored)"
- impact 2.2
- desc "Execution of privileged commands by non-privileged users could be an indication of someone trying to gain unauthorized access to the system."
- describe command('') do
-  
- end
-eof
 
 control "cis-4-1-13" do
  title "Ensure successful file system mounts are collected (Scored)"
@@ -1201,14 +1180,13 @@ control "cis-4-2-2-3" do
   its('stdout') { should match /options { chain_hostnames\(off\); flush_lines\(0\); perm\(0640\); stats_freq\(3600\); threaded\(yes\); };/}
  end
 end
-<<eof
+
 control "cis-4-2-2-4" do
  title "Ensure syslog-ng is configured to send logs to a remote log host (Not Scored)"
  impact 1.1
  desc "Storing log data on a remote host protects log integrity from local attacks. If an attacker gains root access on the local system, they could tamper with or remove log data that is stored on the local system"
  describe command('')
 end
-eof
 
 control "cis-4-2-3" do
  title "Ensure rsyslog or syslog-ng is installed (Scored)"
@@ -1386,7 +1364,7 @@ end
 
 control "cis-5-2-10" do
  title "Ensure SSH PermitUserEnvironment is disabled (Scored)"
- imapct 1.1
+ impact 1.1
  desc "Permitting users the ability to set environment variables through the SSH daemon could potentially allow users to bypass security controls (e.g. setting an execution path that has ssh executing trojan'd programs)"
  describe command('grep PermitUserEnvironment /etc/ssh/sshd_config') do
   its('stdout') { should match /PermitUserEnvironment no/}
@@ -1470,14 +1448,14 @@ control "cis-5-3-1" do
   its('stdout') { should match /password requisite pam_cracklib.so try_first_pass retry=3 minlen=14 dcredit=- 1 ucredit=-1 ocredit=-1 lcredit=-1/}
  end
 end
-<<eof
+
 control "cis-5-3-2" do
  title "Ensure lockout for failed password attempts is configured (Scored)"
  impact 1.1
  desc "Locking out user IDs after n unsuccessful consecutive login attempts mitigates brute force password attacks against your systems."
  describe command('')
 end
-eof
+
 
 control "cis-5-3-3" do
  title "Ensure password reuse is limited (Scored)"
@@ -1512,13 +1490,12 @@ control "cis-5-4-1-1" do
  describe command('grep PASS_MAX_DAYS /etc/login.defs') do
   its('stdout') { should match /PASS_MAX_DAYS 90/}
  end
-<<eof
+
  describe command('egrep ^[^:]+:[^\!*] /etc/shadow | cut -d: -f1') do
   its('stdout') { should match / /}
  end
  describe command('chage --list ')
  end
-eof
 end
 
 control "cis-5-4-1-2" do
@@ -1589,301 +1566,4 @@ control "cis-5-6" do
   its('stdout') { should match /wheel:x:10:root,/}
  end
 end
-
-control "cis-6-1-1" do
- title "Audit system file permissions (Not Scored)"
- impact 2.2
- desc "It is important to confirm that packaged system files and directories are maintained with the permissions they were intended to have from the OS vendor."
- describe command('rpm -Va --nomtime --nosize --nomd5 --nolinkto') do
-  its('stdout') { should match / /}
- end
-end
-
-control "cis-6-1-2" do
- title "Ensure permissions on etc passwd are configured (Scored)"
- impact 1.1
- desc "It is critical to ensure that the etc-passwd file is protected from unauthorized write access. Although it is protected by default, the file permissions could be changed either inadvertently or through malicious actions."
- describe command("stat /etc/passwd") do
-  its('stdout') { should match /Access: \(0644\/-rw-r--r--\) Uid: \( 0\/ root\) Gid: \( 0\/ root\)/ }
- end
-end
-
-control "cis-6-1-3" do
- title "Ensure permissions on etc-shadow are configured (Scored)"
- impact 1.1
- desc "If attackers can gain read access to the etc-shadow file, they can easily run a password cracking program against the hashed password to break it. Other security information that is stored in the etc-shadow file (such as expiration) could also be useful to subvert the user accounts."
- describe command('stat /etc/shadow') do
-  its('stdout') { should match /Access: (0000\/----------) Uid: ( 0\/ root) Gid: ( 0\/ root)/}
- end
-end
-
-control "cis-6-1-4" do
- title "Ensure permissions on etc-group are configured (Scored)"
- impact 1.1
- desc "The etc-group file needs to be protected from unauthorized changes by non-privileged users, but needs to be readable as this information is used with many non-privileged programs."
- describe command('stat /etc/group') do
-  its('stdout') { should match /Access: (0644\/-rw-r--r--) Uid: ( 0\/ root) Gid: ( 0\/ root)/}
- end
-end
-
-control "cis-6-1-5" do
- title "Ensure permissions on etc-gshadow are configured (Scored)"
- impact 1.1
- desc "If attackers can gain read access to the etc-gshadow file, they can easily run a password cracking program against the hashed password to break it. Other security information that is stored in the etc-gshadow file (such as group administrators) could also be useful to subvert the group."
- describe command('stat /etc/gshadow') do
-  its('stdout') { should match /Access: (0600\/-rw-------) Uid: ( 0\/ root) Gid: ( 0\/ root)/}
- end
-end
-
-control "cis-6-1-6" do
- title "Ensure permissions on etc-passwd- are configured (Scored)"
- impact 1.1
- desc "It is critical to ensure that the etc-passwd file is protected from unauthorized access. Although it is protected by default, the file permissions could be changed either inadvertently or through malicious actions."
- describe command('stat /etc/passwd-') do
-  its('stdout') { should match /Access: (0600\/-rw-------) Uid: ( 0\/ root) Gid: ( 0\/ root)/}  
- end
-end
-
-control "cis-6-1-7" do
- title "Ensure permissions on etc-shadow- are configured (Scored)"
- impact 1.1
- desc "It is critical to ensure that the etc-shadow- file is protected from unauthorized access. Although it is protected by default, the file permissions could be changed either inadvertently or through malicious actions."
- describe command('stat /etc/shadow-') do
-  its('stdout') { should match /Access: (0600\/-rw-------) Uid: ( 0\/ root) Gid: ( 0\/ root)/}
- end
-end
-
-control "cis-6-1-8" do
- title "Ensure permissions on etc-group- are configured (Scored)"
- impact 1.1
- desc "It is critical to ensure that the etc-group- file is protected from unauthorized access. Although it is protected by default, the file permissions could be changed either inadvertently or through malicious actions."
- describe command('stat /etc/group-') do
-  its('stdout') { should match /Access: (0600\/-rw-------) Uid: ( 0\/ root) Gid: ( 0\/ root)/}
- end
-end
-
-control "cis-6-1-9" do
- title "stat etc-gshadow-"
- impact 1.1
- desc "It is critical to ensure that the etc-gshadow- file is protected from unauthorized access. Although it is protected by default, the file permissions could be changed either inadvertently or through malicious actions."
- describe command('stat /etc/gshadow-') do
-  its('stdout') { should match /Access: (0600\/-rw-------) Uid: ( 0\/ root) Gid: ( 0\/ root)/}
- end
-end
-
-control "cis-6-1-10" do
- title "Ensure no world writable files exist (Scored)"
- impact 1.1
- desc "Data in world-writable files can be modified and compromised by any user on the system. World writable files may also indicate an incorrectly written script or program that could potentially be the cause of a larger compromise to the system's integrity."
- describe command("df --local -P | awk if (NR!=1) print $6 | xargs -I '{}' find '{}' -xdev -") do
-  its('stdout') { should match /type f -perm -0002/}
- end
-end
-
-control "cis-6-1-11" do
- title "Ensure no unowned files or directories exist (Scored)"
- impact 1.1
- desc "A new user who is assigned the deleted user's user ID or group ID may then end up "owning" these files, and thus have more access on the system than was intended."
- describe command("df --local -P | awk if (NR!=1) print $6 | xargs -I '{}' find '{}' -xdev -")  do
-  its('stdout') { should match /nouser/}
- end
-end
-
-control "cis-6-1-12" do
- title "Ensure no ungrouped files or directories exist (Scored)"
- impact 1.1
- desc "A new user who is assigned the deleted user's user ID or group ID may then end up "owning" these files, and thus have more access on the system than was intended."
- describe command("df --local -P | awk if (NR!=1) print $6 | xargs -I '{}' find '{}' -xdev -") do
-   its('stdout') { should match /nogroup/}
- end
-end
-
-control "cis-6-1-13" do
- title "Audit SUID executables (Not Scored)"
- impact 1.1
- desc "There are valid reasons for SUID programs, but it is important to identify and review such programs to ensure they are legitimate."
- describe command("df --local -P | awk if (NR!=1) print $6 | xargs -I '{}' find '{}' -xdev -") do
-  its('stdout') { should match /type f -perm -4000/}
- end
-end
-
-control "cis-6-1-14" do
- title "Audit SGID executables (Not Scored)"
- impact 1.1
- desc "There are valid reasons for SGID programs, but it is important to identify and review such programs to ensure they are legitimate. Review the files returned by the action in the audit section and check to see if system binaries have a different md5 checksum than what from the package. This is an indication that the binary may have been replaced."
- describe command("df --local -P | awk if (NR!=1) print $6 | xargs -I '{}' find '{}' -xdev -") do
-  its('stdout') { should match /type f -perm -2000/}
- end
-end
-
-control "cis-6-2-1" do
- title "Ensure password fields are not empty (Scored)"
- impact 1.1
- desc "An account with an empty password field means that anybody may log in as that user without providing a password."
- describe command("cat /etc/shadow | awk -F: "($2 == "" ) { print $1 " does not have a password "}"") do
-  its('stdout') { should match //}
- end
-end
-
-control "cis-6-2-2" do
- title "Ensure no legacy + entries exist in /etc/passwd (Scored)"
- impact 1.1
- desc "These entries may provide an avenue for attackers to gain privileged access on the system."
- describe command("grep '^+:' /etc/passwd") do
-  its('stdout') { should match //}
- end
-end
-
-control "cis-6-2-3" do
- title "Ensure no legacy + entries exist in /etc/shadow (Scored)"
- impact 1.1
- desc "These entries may provide an avenue for attackers to gain privileged access on the system." 
- describe command("grep '^+:' /etc/shadow") do
-  its('stdout') { should match //}
- end
-end
-
-control "cis-6-2-4" do
- title "Ensure no legacy + entries exist in /etc/shadow (Scored)"
- impact 1.1
- desc "These entries may provide an avenue for attackers to gain privileged access on the system."
- describe command("grep '^+:' /etc/group") do
-  its('stdout') { should match //}
- end
-end
-
-control "cis-6-2-5" do
- title "Ensure root is the only UID 0 account (Scored)"
- impact 1.1
- desc "This access must be limited to only the default root account and only from the system console. Administrative access must be through an unprivileged account using an approved mechanism as noted in Item 5.6 Ensure access to the su command is restricted."
- describe command("cat /etc/passwd | awk -F: '($3 == 0) { print $1 }'") do
-  its('stdout') { should match /root/}
- end
-end
-
-control "cis-6-2-6" do
- title "Ensure root PATH Integrity (Scored)"
-  impact 1.1
-  desc "Including the current working directory (.) or other writable directory in root 's executable path makes it likely that an attacker can gain superuser access by forcing an administrator operating as root to execute a Trojan horse program."
-   describe bash('script_6-2-6') do
-     its('stdout') { should match //}
-    end
-end
-
-control "cis-6-2-7" do
- title "Ensure all users' home directories exist (Scored)"
-  impact 1.1
-  desc "If the user's home directory does not exist or is unassigned, the user will be placed in "/" and will not be able to write any files or have local environment variables set."
-   describe bash('script-6-2-7') do
-     its('stdout') { should match //}
-    end
-end
-
-control "cis-6-2-8" do
- title "Ensure users' home directories permissions are 750 or more restrictive (Scored)"
-  impact 1.1
-  desc "Group or world-writable user home directories may enable malicious users to steal or modify other users' data or to gain another user's system privileges."
-  describe bash('script-6-2-8') do
-    its('stdout') { should macth //}
-  end
-end
-
-control "cis-6-2-9" do
- title "Ensure users own their home directories (Scored)"
-  impact 1.1
-  desc "Since the user is accountable for files stored in the user home directory, the user must be the owner of the directory."
-  describe bash('script-6-2-9') do
-    its('stdout') { should macth //}
-  end
-end
-
-control "cis-6-2-10" do
- title "Ensure users' dot files are not group or world writable (Scored)"
-  impact 1.1
-  desc "Group or world-writable user configuration files may enable malicious users to steal or modify other users' data or to gain another user's system privileges."
-  describe bash('script-6-2-10') do
-    its('stdout') { should macth //}
-  end
-end
-
-control "cis-6-2-11" do
- title "Ensure no users have .forward files (Scored)"
-  impact 1.1
-  desc "Use of the .forward file poses a security risk in that sensitive data may be inadvertently transferred outside the organization. The .forward file also poses a risk as it can be used to execute commands that may perform unintended actions."
-  describe bash('script-6-2-11') do
-    its('stdout') { should macth //}
-  end
-end
-
-control "cis-6-2-12" do
- title "Ensure no users have .netrc files (Scored)"
-  impact 1.1
-  desc "The .netrc file presents a significant security risk since it stores passwords in unencrypted form. Even if FTP is disabled, user accounts may have brought over .netrc files from other systems which could pose a risk to those systems."
-  describe bash('script-6-2-12') do
-    its('stdout') { should macth //}
-  end
-end
-
-control "cis-6-2-13" do
- title "Ensure users' .netrc Files are not group or world accessible (Scored)"
-  impact 1.1
-   desc ".netrcfiles may contain unencrypted passwords that may be used to attack other systems."
-  describe bash('script-6-2-13') do
-    its('stdout') { should macth //}
-  end
-end
-
-control "cis-6-2-14" do
- title "Ensure no users have .rhosts files (Scored)"
-  impact 1.1
-   desc "This action is only meaningful if .rhosts support is permitted in the file /etc/pam.conf . Even though the .rhosts files are ineffective if support is disabled in /etc/pam.conf , they may have been brought over from other systems and could contain information useful to an attacker for those other systems."
-  describe bash('script-6-2-14') do
-    its('stdout') { should macth //}
-  end
-end
-
-control "cis-6-2-15" do
- title "Ensure all groups in /etc/passwd exist in /etc/group (Scored)"
-  impact 1.1
-   desc "Groups defined in the /etc/passwd file but not in the /etc/group file pose a threat to system security since group permissions are not properly managed."
-  describe bash('script-6-2-15') do
-    its('stdout') { should macth //}
-  end
-end
-
-control "cis-6-2-16" do
- title "Ensure no duplicate UIDs exist (Scored)"
-  impact 1.1
-   desc "Users must be assigned unique UIDs for accountability and to ensure appropriate access protections."
-  describe bash('script-6-2-16') do
-    its('stdout') { should macth //}
-  end
-end
-
-control "cis-6-2-17" do
- title "Ensure no duplicate GIDs exist (Scored)"
-  impact 1.1
-   desc "User groups must be assigned unique GIDs for accountability and to ensure appropriate access protections."
-  describe bash('script-6-2-17') do
-    its('stdout') { should macth //}
-  end
-end
-
-control "cis-6-2-18" do
- title "Ensure no duplicate user names exist (Scored)"
-  impact 1.1
-   desc "If a user is assigned a duplicate user name, it will create and have access to files with the first UID for that username in /etc/passwd . For example, if "test4" has a UID of 1000 and a subsequent "test4" entry has a UID of 2000, logging in as "test4" will use UID 1000. Effectively, the UID is shared, which is a security problem."
-  describe bash('script-6-2-18') do
-    its('stdout') { should macth //}
-  end
-end   
-
-control "cis-6-2-19" do
- title "Ensure no duplicate group names exist (Scored)"
-  impact 1.1
-   desc "If a group is assigned a duplicate group name, it will create and have access to files with the first GID for that group in /etc/group . Effectively, the GID is shared, which is a security problem."
-  describe bash('script-6-2-19') do
-    its('stdout') { should macth //}
-  end
-end
-
+eof
